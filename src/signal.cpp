@@ -1,56 +1,48 @@
 #include <stdexcept>
 #include "signal.hpp"
 
-static SIG registered_handler;
-static bool sig_registered = false;
+static SIG::handler fn_TERM = {};
+static SIG::handler fn_ALRM = {};
+static SIG::handler fn_HUP = {};
+static SIG::handler fn_INT = {};
+static SIG::handler fn_PIPE = {};
+static SIG::handler fn_QUIT = {};
+static SIG::handler fn_USR1 = {};
+static SIG::handler fn_USR2 = {};
+static bool _is_registered = false;
 
 static void die_handler(int sig) {
 
-	if ( sig == SIGTERM && registered_handler.TERM ) registered_handler.TERM(sig);
-	else if ( sig == SIGALRM && registered_handler.ALRM ) registered_handler.ALRM(sig);
-	else if ( sig == SIGHUP && registered_handler.HUP ) registered_handler.HUP(sig);
-	else if ( sig == SIGINT && registered_handler.INT ) registered_handler.INT(sig);
-	else if ( sig == SIGPIPE && registered_handler.PIPE ) registered_handler.PIPE(sig);
-	else if ( sig == SIGQUIT && registered_handler.QUIT ) registered_handler.QUIT(sig);
-	else if ( sig == SIGUSR1 && registered_handler.USR1 ) registered_handler.USR1(sig);
-	else if ( sig == SIGUSR2 && registered_handler.USR2 ) registered_handler.USR2(sig);
+	if ( sig == SIGTERM && fn_TERM ) fn_TERM(sig);
+	else if ( sig == SIGALRM && fn_ALRM ) fn_ALRM(sig);
+	else if ( sig == SIGHUP && fn_HUP ) fn_HUP(sig);
+	else if ( sig == SIGINT && fn_INT ) fn_INT(sig);
+	else if ( sig == SIGPIPE && fn_PIPE ) fn_PIPE(sig);
+	else if ( sig == SIGQUIT && fn_QUIT ) fn_QUIT(sig);
+	else if ( sig == SIGUSR1 && fn_USR1 ) fn_USR1(sig);
+	else if ( sig == SIGUSR2 && fn_USR2 ) fn_USR2(sig);
 }
 
-SIG& SIG::operator =(const SIG& other) {
+void fn_assign(SIG* other) {
 
-	this -> TERM = other.TERM;
-	this -> ALRM = other.ALRM;
-	this -> HUP = other.HUP;
-	this -> INT = other.INT;
-	this -> PIPE = other.PIPE;
-	this -> QUIT = other.QUIT;
-	this -> USR1 = other.USR1;
-	this -> USR2 = other.USR2;
-
-	return *this;
+	fn_TERM = other -> TERM;
+	fn_ALRM = other -> ALRM;
+	fn_HUP = other -> HUP;
+	fn_INT = other -> INT;
+	fn_PIPE = other -> PIPE;
+	fn_QUIT = other -> QUIT;
+	fn_USR1 = other -> USR1;
+	fn_USR2 = other -> USR2;
 }
 
-bool SIG::empty() const {
+void fn_clear() {
 
-	return !this -> TERM && !this -> ALRM && !this -> HUP && !this -> INT &&
-		!this -> PIPE && !this -> QUIT && !this -> USR1 && !this -> USR2;
-}
-
-void SIG::clear() {
-
-	this -> TERM = {};
-	this -> ALRM = {};
-	this -> HUP = {};
-	this -> INT = {};
-	this -> PIPE = {};
-	this -> QUIT = {};
-	this -> USR1 = {};
-	this -> USR2 = {};
+	fn_TERM = fn_ALRM = fn_HUP = fn_INT = fn_PIPE = fn_QUIT = fn_USR1 = fn_USR2 = {};
 }
 
 void SIG::install() {
 
-	if ( sig_registered )
+	if ( _is_registered )
 		throw std::runtime_error("signal handler cannot be registered, another handler is already registered");
 
 	struct sigaction exit_action, ignore_action;
@@ -63,8 +55,8 @@ void SIG::install() {
 	sigemptyset(&ignore_action.sa_mask);
 	ignore_action.sa_flags = 0;
 
-	sig_registered = true;
-	registered_handler = *this;
+	_is_registered = true;
+	fn_assign(this);
 
 	if ( sigaction(SIGTERM, this -> TERM ? &exit_action : &ignore_action, NULL) == -1 )
 		throw std::runtime_error("failed to register signal handler for SIGTERM");
@@ -86,7 +78,7 @@ void SIG::install() {
 
 void SIG::uninstall() {
 
-	if ( !sig_registered )
+	if ( !_is_registered )
 		throw std::runtime_error("signal handler cannot be unregistered, signal handler was not previously registered");
 
 	struct sigaction def_action;
@@ -104,13 +96,13 @@ void SIG::uninstall() {
 	sigaction(SIGUSR1, &def_action, NULL);
 	sigaction(SIGUSR2, &def_action, NULL);
 
-	sig_registered = false;
-	registered_handler.clear();
+	_is_registered = false;
+	fn_clear();
 }
 
 bool SIG::is_registered() {
 
-	return sig_registered;
+	return _is_registered;
 }
 
 std::string SIG::to_string(int sig) {

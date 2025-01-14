@@ -9,19 +9,14 @@ struct SIG {
 
 		using handler = std::function<void(int)>;
 
-		handler TERM = {};
-		handler ALRM = {};
-		handler HUP = {};
-		handler INT = {};
-		handler PIPE = {};
-		handler QUIT = {};
-		handler USR1 = {};
-		handler USR2 = {};
-
-		SIG& operator =(const SIG& other);
-
-		bool empty() const;
-		void clear();
+		const handler TERM = {};
+		const handler ALRM = {};
+		const handler HUP = {};
+		const handler INT = {};
+		const handler PIPE = {};
+		const handler QUIT = {};
+		const handler USR1 = {};
+		const handler USR2 = {};
 
 		void install();
 
